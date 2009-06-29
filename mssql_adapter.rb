@@ -128,7 +128,15 @@ module ActiveRecord
               "X'#{value}'" # Hexadecimal notation
           end
         elsif column && column.sql_type =~ /^datetime$/
-          value.nil? ? super : "'#{quoted_date(value)}'"
+          if value.nil?
+            super
+          elsif value.acts_like?(:date) || value.acts_like?(:time)
+            "'#{quoted_date(value)}'"
+          elsif value.kind_of? String
+            value.to_s # Fixtures#insert_fixtures sets fields like +updated_now+ to Time.now.to_s(:db)
+          else
+            raise NotImplementedError, "value (#{value.inspect}) should be Time or String for datetime columns"
+          end
         elsif column && column.sql_type =~ /^boolean$/
           "'#{value ? 1 : 0}'"
         else
