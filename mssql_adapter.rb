@@ -128,14 +128,11 @@ module ActiveRecord
               "X'#{value}'" # Hexadecimal notation
           end
         elsif column && column.sql_type =~ /^datetime$/
-          if value.nil?
-            super
-          elsif value.acts_like?(:date) || value.acts_like?(:time)
+          if (not value.nil?) && (value.acts_like?(:date) || value.acts_like?(:time))
             "'#{quoted_date(value)}'"
-          elsif value.kind_of? String
-            value.to_s # Fixtures#insert_fixtures sets fields like +updated_now+ to Time.now.to_s(:db)
           else
-            raise NotImplementedError, "value (#{value.inspect}) should be Time or String for datetime columns"
+            # Fixtures#insert_fixtures sets fields like +updated_now+ to a String instance ("Time.now.to_s(:db)")
+            super
           end
         elsif column && column.sql_type =~ /^boolean$/
           "'#{value ? 1 : 0}'"
@@ -188,7 +185,11 @@ module ActiveRecord
         #TODO: @async
         select_rows sql, name
       end
- 
+      
+      def raise_statement_invalid_error(sql, error)
+        raise ActiveRecord::StatementInvalid, "SQL=#{sql}, #{error}"
+      end
+      
       # Executes an SQL statement
       def execute(sql, name = nil)
         #log(sql, name) do
@@ -199,11 +200,11 @@ module ActiveRecord
           
           command = System::Data::SqlClient::SqlCommand.new sql, @connection
           command.transaction = @transaction
-          command.execute_non_query
-          
+          command.execute_non_query          
+        rescue System::Data::SqlClient::SqlException => e
+          raise_statement_invalid_error sql, e
+        ensure
           set_identity_insert_off(table_name) if (is_insert_sql(sql) and includes_id_field(sql))
-        rescue System::Data::SqlClient::SqlException
-          raise ActiveRecord::StatementInvalid, "#{$!}"
         end
       end
  
@@ -481,8 +482,8 @@ SQL
               rows << row
             end
             return fields, rows
-          rescue System::Data::SqlClient::SqlException
-            raise ActiveRecord::StatementInvalid, "#{$!}"
+          rescue System::Data::SqlClient::SqlException => e
+            raise_statement_invalid_error sql, e
           ensure
             if reader != nil
               reader.close
