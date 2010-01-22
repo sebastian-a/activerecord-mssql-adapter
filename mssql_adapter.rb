@@ -33,6 +33,7 @@ module ActiveRecord
           builder.password = config[:password].to_s
         end
         builder.initial_catalog = config[:database]
+        builder.multiple_active_result_sets = config[:multiple_active_result_sets] if config.has_key?(:multiple_active_result_sets)
         connection_string = builder.connection_string
       end
       connection = System::Data::SqlClient::SqlConnection.new connection_string
@@ -210,7 +211,7 @@ module ActiveRecord
           
           command = System::Data::SqlClient::SqlCommand.new sql, @connection
           command.transaction = @transaction
-          command.command_timeout = @config[:command_timeout] if @config[:command_timeout]
+          command.command_timeout = @config[:command_timeout] if @config.has_key?(:command_timeout)
           command.execute_non_query          
         rescue System::Data::SqlClient::SqlException => e
           raise_statement_invalid_error sql, e
