@@ -129,7 +129,7 @@ module ActiveRecord
           end
         elsif column && column.sql_type =~ /^datetime$/
           if (not value.nil?) && (value.acts_like?(:date) || value.acts_like?(:time))
-            "'#{quoted_date(value)}'"
+            "CONVERT(datetime,'#{quoted_date(value)}',120)"
           else
             # Fixtures#insert_fixtures sets fields like +updated_now+ to a String instance ("Time.now.to_s(:db)")
             super
