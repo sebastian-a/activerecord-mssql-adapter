@@ -200,6 +200,7 @@ module ActiveRecord
           
           command = System::Data::SqlClient::SqlCommand.new sql, @connection
           command.transaction = @transaction
+          command.command_timeout = @config[:command_timeout] if @config[:command_timeout]
           command.execute_non_query          
         rescue System::Data::SqlClient::SqlException => e
           raise_statement_invalid_error sql, e
