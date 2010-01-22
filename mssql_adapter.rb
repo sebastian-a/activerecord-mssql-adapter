@@ -136,11 +136,21 @@ module ActiveRecord
           end
         elsif column && column.sql_type =~ /^boolean$/
           "'#{value ? 1 : 0}'"
+        elsif value.class.to_s == 'System::Byte[]' && column && column.sql_type =~ /^binary$/
+          "CONVERT(varbinary(max),'0x#{bytes_to_string(value)}',1)"          
         else
           super
         end
       end
  
+      def bytes_to_string(value)
+        result = ""
+        value.each do |byte|
+          result += byte.to_i.to_s(16).rjust(2, '0')
+        end
+        result
+      end
+      
       # Double any single-quote characters in the string
       def quote_string(s) #:nodoc:
         s.gsub(/'/, "''") # ' (for ruby-mode)
